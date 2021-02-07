@@ -1,9 +1,9 @@
 # service-monitor
 
-Node.js service monitor
+Web Service monitor by Node.js
 
-## 创建过程
-
+## 该项目创建过程思路
+### 初始化文件目录
 ```bash
 # 创建 src、test 目录
 mkdir src
@@ -84,3 +84,38 @@ Code-quality rules: eg no-unused-vars, no-extra-bind, no-implicit-globals, prefe
 Prettier does nothing to help with those kind of rules. They are also the most important ones provided by linters as they are likely to catch real bugs with your code!
 
 In other words, use **Prettier for formatting** and **linters for catching bugs!**
+
+### 开始写代码
+我们想要封装一个库，来实现这个功能。首先写一个使用示例
+
+```js
+const ServiceMonitor = require('../src/index')
+
+const serviceMonitor = new ServiceMonitor({
+  interval: 10, // 循环间隔，默认 10 分钟
+  // 邮件配置
+})
+
+// 添加测试接口
+serviceMonitor.use()
+
+// 添加测试网站
+serviceMonitor.use()
+
+// 开始监听测试，如果发现错误发送邮件
+serviceMonitor.monitor()
+```
+想要达到的效果是：
+1. 每天测试该接口或服务是否正常，如果异常则发送邮件提示
+2. 为确保监听服务是在跑着的，而且很稳定，每天早、中、晚发送服务正常报告邮件。
+3. 可以通过网页，在线实时测试服务是否正常。可以看到当前监听的服务、测试结果等。
+
+
+### 核心思路
+测试方法
+- 测试接口，发送 http 请求，比对结果
+- 测试网页是否可访问，发送 GET 请求，比对返回文本是否匹配
+
+结果收集上报
+- 为了方便查看结果，由于需要可以把所有测试结果上报（发邮件）或显示在页面上
+- 由于请求都是异步的，需要都使用 Promise 封装。待全部测试完成后，resolve 对应的结果。如果超时，reject 并返回部分结果。
