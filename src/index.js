@@ -2,18 +2,21 @@ const http = require('http')
 const https = require('https')
 const querystring = require('querystring')
 const log4js = require('log4js')
+const schedule = require('node-schedule')
+const sendMail = require('./lib/sendMail')
 
 const logger = log4js.getLogger()
 logger.level = 'debug'
 
 class ServiceMonitor {
   constructor(options) {
-    const { interval = 3000, port = 8800 } = options
+    const { interval = 3000, port = 8800, mailOption, scheduleStr } = options
     this.interval = interval
     this.port = port
+    this.mailOption = mailOption
+    this.scheduleStr = scheduleStr
     this.apiList = []
     this.pageList = []
-    this.loopCount = 0 // 测试循环次数
   }
 
   addApi(reqOptions, expectRes) {
@@ -24,7 +27,6 @@ class ServiceMonitor {
     this.pageList.push({ url, expectContainsText })
   }
 
-  // node-schedule
   // 每日定时任务
   monitor() {
     if (this.pageList.length === 0 && this.apiList.length === 0) {
@@ -32,19 +34,49 @@ class ServiceMonitor {
       return
     }
 
-    // 按间隔循环
-    setInterval(async () => {
+    // Job
+    console.log('start monitor')
+    schedule.scheduleJob(this.scheduleStr, async () => {
       try {
         const result = await this.startTestPromise()
-        console.log(result)
-        // 处理结果，或发邮件
+        this.sendEmail(result)
       } catch (e) {
         console.log(e.message)
       }
-    }, this.interval)
+    })
+  }
 
-    // 包装服务稳定性，定时发报告
-    // setInterval(() => {})
+  /**
+   * 发送邮件
+   * @param {*} result
+   */
+  async sendEmail(result) {
+    const { pagePassList, pageFailList, apiPassList, apiFailList } = result
+    // 处理结果，或发邮件
+    const isPass = pageFailList.length === 0 && apiFailList.length === 0
+    try {
+      await sendMail({
+        ...this.mailOption,
+        title: `${this.mailOption.title} - ${isPass ? 'PASS' : 'FAIL'}`,
+        mailHtml: `
+          <div>测试结果：${
+            isPass
+              ? '<span style="color: green">全部通过</span>'
+              : '<span style="color:red">发现异常</span>'
+          }</div>
+  
+          <p>总测试项 ${this.pageList.length + this.apiList.length} 个，通过测试项 ${
+          pagePassList.length + apiPassList.length
+        } 个，异常测试项 ${pageFailList.length + apiFailList.length} 个</p>
+        <div style="color: red">${pageFailList.length ? pageFailList.join('<br/>') : ''}</div>
+        <div style="color: red">${apiFailList.length ? apiFailList.join('<br/>') : ''}</div>
+        <div style="color: green">${pagePassList.length ? pagePassList.join('<br/>') : ''}</div>
+        <div style="color: green"> ${apiPassList.length ? apiPassList.join('<br/>') : ''}</div>
+        `,
+      })
+    } catch (e) {
+      console.log(e.message)
+    }
   }
 
   /**
@@ -54,8 +86,7 @@ class ServiceMonitor {
   startTestPromise() {
     // 没有 resolve，等待所有结果完成即可，后期可能加一个超时报错处理，防止卡死
     return new Promise((resolve) => {
-      this.loopCount += 1 // Mark loop count
-      console.log(`\nLoop Test ${this.loopCount} Start. Gap ${this.interval}ms`)
+      console.log(`\nStart Test`)
 
       let testPageCount = 0
       let testAPICount = 0
@@ -124,7 +155,7 @@ class ServiceMonitor {
     const { url, expectContainsText } = pageInfo
     const httpObj = this.getHttpObj(url)
     return new Promise((reslove, reject) => {
-      const logPreInfo = `${this.loopCount} ${url}`
+      const logPreInfo = `${url}`
       const req = httpObj.get(url, (res) => {
         res.setEncoding('utf8')
         let rawData = ''
@@ -159,7 +190,7 @@ class ServiceMonitor {
     return new Promise((resolve, reject) => {
       const { url, method = 'GET', headers, payloadType = 'json', payload } = apiInfo.reqOptions
       const httpObj = this.getHttpObj(url)
-      const preInfo = `${this.loopCount} ${url}`
+      const preInfo = `${url}`
       const req = httpObj.request(
         url,
         {
