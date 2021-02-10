@@ -3,6 +3,8 @@ const https = require('https')
 const querystring = require('querystring')
 const log4js = require('log4js')
 const schedule = require('node-schedule')
+const Koa = require('koa')
+const Router = require('koa-router')
 const sendMail = require('./lib/sendMail')
 
 const logger = log4js.getLogger()
@@ -10,9 +12,9 @@ logger.level = 'debug'
 
 class ServiceMonitor {
   constructor(options) {
-    const { interval = 3000, port = 8800, mailOption, scheduleStr } = options
-    this.interval = interval
+    const { port = 8888, mailOption, scheduleStr, path } = options
     this.port = port
+    this.path = path
     this.mailOption = mailOption
     this.scheduleStr = scheduleStr
     this.apiList = []
@@ -44,6 +46,21 @@ class ServiceMonitor {
         console.log(e.message)
       }
     })
+
+    // Start web server
+    const app = new Koa()
+    const router = new Router()
+    router.get(this.path, async (ctx) => {
+      try {
+        const result = await this.startTestPromise()
+        const { htmlStr } = this.getResultInfo(result)
+        ctx.body = htmlStr
+      } catch (e) {
+        console.log(e.message)
+      }
+    })
+    app.use(router.routes())
+    app.listen(this.port, () => console.log(`Server start on ${this.port} port`))
   }
 
   /**
@@ -51,31 +68,44 @@ class ServiceMonitor {
    * @param {*} result
    */
   async sendEmail(result) {
-    const { pagePassList, pageFailList, apiPassList, apiFailList } = result
-    // 处理结果，或发邮件
-    const isPass = pageFailList.length === 0 && apiFailList.length === 0
+    const { isPass, htmlStr } = this.getResultInfo(result)
     try {
       await sendMail({
         ...this.mailOption,
         title: `${this.mailOption.title} - ${isPass ? 'PASS' : 'FAIL'}`,
-        mailHtml: `
-          <div>测试结果：${
-            isPass
-              ? '<span style="color: green">全部通过</span>'
-              : '<span style="color:red">发现异常</span>'
-          }</div>
-  
-          <p>总测试项 ${this.pageList.length + this.apiList.length} 个，通过测试项 ${
-          pagePassList.length + apiPassList.length
-        } 个，异常测试项 ${pageFailList.length + apiFailList.length} 个</p>
-        <div style="color: red">${pageFailList.length ? pageFailList.join('<br/>') : ''}</div>
-        <div style="color: red">${apiFailList.length ? apiFailList.join('<br/>') : ''}</div>
-        <div style="color: green">${pagePassList.length ? pagePassList.join('<br/>') : ''}</div>
-        <div style="color: green"> ${apiPassList.length ? apiPassList.join('<br/>') : ''}</div>
-        `,
+        mailHtml: htmlStr,
       })
     } catch (e) {
       console.log(e.message)
+    }
+  }
+
+  getResultInfo(result) {
+    const { pagePassList, pageFailList, apiPassList, apiFailList } = result
+    // 处理结果，或发邮件
+    const isPass = pageFailList.length === 0 && apiFailList.length === 0
+    const htmlStr = `
+      <div>测试结果：${
+        isPass
+          ? '<span style="color: green">全部通过</span>'
+          : '<span style="color:red">发现异常</span>'
+      }</div>
+
+      <p>总测试项 ${this.pageList.length + this.apiList.length} 个，通过测试项 ${
+      pagePassList.length + apiPassList.length
+    } 个，异常测试项 ${pageFailList.length + apiFailList.length} 个</p>
+    <div style="color: red">${pageFailList.length ? pageFailList.join('<br/>') : ''}</div>
+    <div style="color: red">${apiFailList.length ? apiFailList.join('<br/>') : ''}</div>
+    <div style="color: green">${pagePassList.length ? pagePassList.join('<br/>') : ''}</div>
+    <div style="color: green"> ${apiPassList.length ? apiPassList.join('<br/>') : ''}</div>
+    <div style="font-size: 13px;">
+      <p>Powered by <span style="font-weight:bold">service-monitor</span></p>
+      <p>${new Date()}</p>
+    </div>
+    `
+    return {
+      isPass,
+      htmlStr,
     }
   }
 

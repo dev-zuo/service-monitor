@@ -2,11 +2,10 @@ const ServiceMonitor = require('../src/index')
 
 const serviceMonitor = new ServiceMonitor({
   // 定时任务时间参数，与 node-monitor 时间参数一致
-  scheduleStr: '1 * * * * *',
+  scheduleStr: '1 * * * * *', // 测试用，每分钟第一秒执行任务
   // scheduleStr: '* * 7,14,21 * * *',
+
   // 邮件配置
-  // 可视化入口、网页默认端口
-  port: 8800,
   mailOption: {
     baseMail: '916707888@qq.com', // 发送邮件的基础邮箱
     baseAuthCode: 'xxxx', // qq POP3/SMTP授权码，如果是gmail，直接填密码
@@ -14,6 +13,10 @@ const serviceMonitor = new ServiceMonitor({
     to: 'i@zuoguoqing.com,guoqzuo@gmail.com',
     title: 'Sevice monitor 报告',
   },
+
+  // 可视化入口、网页默认端口
+  port: 8888,
+  path: '/monitor',
 })
 
 // 如果 qq POP3/SMTP授权码错误，会出现如下错误
@@ -50,5 +53,5 @@ serviceMonitor.addPage('http://fe.zuo11.com', '<title>首页 | 左小白的前�
 serviceMonitor.addPage('https://fe.zuo11.com', '<title>首页 | 左小白的前端笔记</title>')
 // serviceMonitor.addPage('https://kkk.zuo11.com', 'xxxx')
 
-// 开始监听测试，如果发现错误发送邮件
+// 开始执行监听任务，开启 http 服务，可以通过 http://127.0.0.1:[port][path] 手动测试并查看结果
 serviceMonitor.monitor()
