@@ -3,7 +3,7 @@ const ServiceMonitor = require('../src/index')
 const serviceMonitor = new ServiceMonitor({
   // 定时任务时间参数，与 node-monitor 时间参数一致
   scheduleStr: '1 * * * * *', // 测试用，每分钟第一秒执行任务
-  // scheduleStr: '* * 7,14,21 * * *',
+  // scheduleStr: '0 0 7,14,21 * * *',
 
   // 邮件配置
   mailOption: {
@@ -11,7 +11,7 @@ const serviceMonitor = new ServiceMonitor({
     baseAuthCode: 'xxxx', // qq POP3/SMTP授权码，如果是gmail，直接填密码
     from: 'guoqzuo <i@zuoguoqing.com>',
     to: 'i@zuoguoqing.com,guoqzuo@gmail.com',
-    title: 'Sevice monitor 报告',
+    title: 'Service monitor 报告',
   },
 
   // 可视化入口、网页默认端口
