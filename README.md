@@ -2,7 +2,7 @@
 
 Web Service monitor by Node.js, used to check the accessibility of web pages and APIs, and send email notifications.
 
-基于 Node.js 的 Web 服务监控系统，用于检测网页、接口 API 的可访问性，发送邮件通知。
+基于 Node.js 的 Web 服务监控系统，用于检测网页、接口 API 的可访问性，发送邮件通知。视频介绍：[bilibili](https://www.bilibili.com/video/BV1LK4y1J7gM/)
 
 npm package
 
