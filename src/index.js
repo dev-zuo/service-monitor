@@ -300,7 +300,14 @@ class ServiceMonitor {
 
     // 如果是对象
     if (expectResType === 'object') {
-      const resObj = JSON.parse(res)
+      // fix issue
+      let resObj = null
+      try {
+        resObj = JSON.parse(res)
+      } catch (e) {
+        // 如果 res 非 JSON
+        return false
+      }
       const props = Object.keys(expectRes)
       if (props.length === 0) {
         // console.log('===2')
