@@ -111,3 +111,15 @@ sendMail fail Invalid login: 535 Login Fail. Please enter your authorization cod
 - [x] 将结果发送邮件
 - [x] 定时任务
 - [x] 打开网页，实时手动检测
+
+## 更新日志
+```js
+v0.1.2(2021-04/11)
+  1. F 修复 hang up, when res is not json string, JSON.parse(res) error
+
+v0.1.1(2021/02/11)
+  1. A 新增 打开静态页面实时检测，实时看测试结果
+
+v0.1.0(2021/02/08)
+  1. A 新增 页面测试、API 测试并发送邮件通知，完成基础功能
+```
